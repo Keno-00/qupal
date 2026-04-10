@@ -6,6 +6,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { analyzeWithMhrqi } from './src/mhrqi/pipeline';
 import {
   ActivityIndicator,
   Alert,
@@ -46,19 +47,6 @@ type ScanRecord = {
 type Screen = 'setup' | 'capture' | 'review' | 'report' | 'history';
 
 const STORAGE_KEY = 'glance_scans_v1';
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
-
-function hashString(input: string): number {
-  let hash = 0;
-  for (let i = 0; i < input.length; i += 1) {
-    hash = (hash << 5) - hash + input.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
-}
 
 function formatPct(value: number): string {
   return `${Math.round(value * 100)}%`;
@@ -188,20 +176,19 @@ export default function App() {
     }
     try {
       setIsBusy(true);
-      const enhanced = await manipulateAsync(
-        rawUri,
-        [{ resize: { width: 1024 } }],
-        { compress: 0.9, format: SaveFormat.JPEG },
-      );
+      const enhanced = await manipulateAsync(rawUri, [{ resize: { width: 1024, height: 1024 } }], {
+        compress: 0.9,
+        format: SaveFormat.JPEG,
+      });
 
       const info = await FileSystem.getInfoAsync(enhanced.uri);
       const size = info.exists && 'size' in info && info.size ? info.size : 0;
 
-      // Deterministic pseudo-inference for offline MVP behavior.
-      const seed = hashString(`${patientCode}:${eyeSide}:${size}:${enhanced.uri}`);
-      const diabetic = clamp01(0.2 + (seed % 53) / 100);
-      const hyper = clamp01(0.15 + ((Math.floor(seed / 7) % 58) / 100));
-      const glaucoma = clamp01(0.1 + ((Math.floor(seed / 11) % 61) / 100));
+      const mhrqiScores = await analyzeWithMhrqi(enhanced.uri, 1024);
+
+      const diabetic = mhrqiScores.diabeticRetinopathy;
+      const hyper = mhrqiScores.hypertensionRetinopathy;
+      const glaucoma = mhrqiScores.glaucomaSigns;
       const maxProbability = Math.max(diabetic, hyper, glaucoma);
 
       const result: AnalysisResult = {
@@ -211,7 +198,7 @@ export default function App() {
         riskLevel: deriveRiskLevel(maxProbability),
       };
 
-      const summary = inferMarkerSummary(result);
+      const summary = mhrqiScores.markerSummary || inferMarkerSummary(result);
 
       const trend = hasDiagnosis
         ? computeTrend(previousForCurrentPatient, maxProbability)
