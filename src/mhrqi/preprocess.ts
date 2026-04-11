@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as jpeg from 'jpeg-js';
-import { Buffer } from 'buffer';
+import { base64ToBytes } from '../utils/base64';
+import { applyCircularFundusMask } from './mask';
 
 import { PreprocessedImage } from './types';
 
@@ -30,7 +31,7 @@ export async function preprocessImageForMhrqi(
     encoding: FileSystem.EncodingType.Base64,
   });
 
-  const decoded = jpeg.decode(Buffer.from(base64, 'base64'), { useTArray: true });
+  const decoded = jpeg.decode(base64ToBytes(base64), { useTArray: true });
   const { width, height, data } = decoded;
 
   const side = Math.min(width, height);
@@ -49,6 +50,9 @@ export async function preprocessImageForMhrqi(
       normalized[y * target + x] = gray;
     }
   }
+
+  // Align model input with capture guidance by suppressing non-fundus border pixels.
+  applyCircularFundusMask(normalized, target);
 
   return { size: target, normalized };
 }

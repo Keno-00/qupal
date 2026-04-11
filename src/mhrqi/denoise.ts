@@ -16,6 +16,24 @@ function prefixKey(vec: readonly number[]): string {
   return vec.slice(0, vec.length - 2).join(',');
 }
 
+function computeTopWindowMsbProxy(
+  sumQuantized: number,
+  count: number,
+  bitDepth: number,
+  topWindowBits = 4,
+): 0 | 1 {
+  if (count <= 0 || bitDepth <= 0) {
+    return 0;
+  }
+
+  const windowBits = Math.max(1, Math.min(topWindowBits, bitDepth));
+  const shift = bitDepth - windowBits;
+  const parentAvg = Math.round(sumQuantized / count);
+  const parentWindow = parentAvg >> shift;
+  const parentProxyMsb = (parentWindow >> (windowBits - 1)) & 1;
+  return parentProxyMsb === 1 ? 1 : 0;
+}
+
 export function computeDenoiseOutcomes(
   hierarchicalCoordMatrix: readonly number[][],
   normalizedImage: Float32Array,
@@ -56,8 +74,7 @@ export function computeDenoiseOutcomes(
       const q = quantizeIntensity(normalizedImage[r * imageSide + c] ?? 0, bitDepth);
       parentSum += q;
     }
-    const parentAvg = indices.length > 0 ? Math.round(parentSum / indices.length) : 0;
-    const parentMsb = (parentAvg >> (bitDepth - 1)) & 1;
+    const parentMsb = computeTopWindowMsbProxy(parentSum, indices.length, bitDepth, 4);
 
     for (let i = 0; i < indices.length; i += 1) {
       const vec = hierarchicalCoordMatrix[indices[i]];
