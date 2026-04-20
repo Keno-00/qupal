@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "thresholds": {
+    "drAccuracyMin": 0.55,
+    "glaucomaAccuracyMin": 0.7
+  },
+  "samples": [
+    {
+      "id": "dr-0001",
+      "task": "dr-grading",
+      "image": "validation/images/dr-0001.jpg",
+      "label": 2,
+      "source": "APTOS 2019"
+    },
+    {
+      "id": "gl-0001",
+      "task": "glaucoma-screening",
+      "image": "validation/images/gl-0001.jpg",
+      "label": 1,
+      "source": "REFUGE"
+    }
+  ]
+}

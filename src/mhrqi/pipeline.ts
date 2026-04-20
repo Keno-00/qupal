@@ -74,14 +74,18 @@ function grayscaleToBmpBase64(image: Float32Array, side: number): string {
   return bytesToBase64(bmp);
 }
 
-async function persistMhrqiImage(reconstructed: Float32Array, side: number): Promise<string | null> {
+async function persistNamedMhrqiImage(
+  reconstructed: Float32Array,
+  side: number,
+  suffix: string,
+): Promise<string | null> {
   if (!FileSystem.documentDirectory) {
     return null;
   }
 
   const dir = `${FileSystem.documentDirectory}mhrqi/`;
   await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-  const targetUri = `${dir}mhrqi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.bmp`;
+  const targetUri = `${dir}mhrqi-${suffix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.bmp`;
   const base64 = grayscaleToBmpBase64(reconstructed, side);
   await FileSystem.writeAsStringAsync(targetUri, base64, {
     encoding: FileSystem.EncodingType.Base64,
@@ -245,7 +249,14 @@ export async function runMhrqiPreprocessPass(
   uri: string,
   preferredTarget = 1024,
   onProgress?: (progress01: number) => void,
-): Promise<{ imageSide: number; pixelCount: number; sparseEntries: number; outputUri: string | null }> {
+): Promise<{
+  imageSide: number;
+  pixelCount: number;
+  sparseEntries: number;
+  mhrqiUri: string | null;
+  denoisedUri: string | null;
+  outputUri: string | null;
+}> {
   const report = async (progress01: number) => {
     onProgress?.(clamp01(progress01));
     await tick();
@@ -267,19 +278,29 @@ export async function runMhrqiPreprocessPass(
   await report(0.72);
   const { bins, biasStats } = makeBinsFromSparseState(sparse, true, outcomes);
   await report(0.82);
-  const reconstructed = binsToImage(
+  const reconstructedBaseline = binsToImage(
+    bins,
+    hierarchy,
+    [preprocessed.size, preprocessed.size],
+  );
+  const reconstructedDenoised = binsToImage(
     bins,
     hierarchy,
     [preprocessed.size, preprocessed.size],
     biasStats,
   );
-  const outputUri = await persistMhrqiImage(reconstructed, preprocessed.size);
+  const [mhrqiUri, denoisedUri] = await Promise.all([
+    persistNamedMhrqiImage(reconstructedBaseline, preprocessed.size, 'baseline'),
+    persistNamedMhrqiImage(reconstructedDenoised, preprocessed.size, 'denoised'),
+  ]);
   await report(1);
 
   return {
     imageSide: preprocessed.size,
     pixelCount: preprocessed.size * preprocessed.size,
     sparseEntries: sparse.entries.length,
-    outputUri,
+    mhrqiUri,
+    denoisedUri,
+    outputUri: denoisedUri,
   };
 }

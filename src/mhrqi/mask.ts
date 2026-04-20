@@ -1,6 +1,6 @@
-import { CAPTURE_GUIDE_RADIUS_RATIO } from './guide';
+import { CAPTURE_GUIDE_POST_CROP_MASK_RADIUS_RATIO } from './guide';
 
-const DEFAULT_MASK_RADIUS_RATIO = CAPTURE_GUIDE_RADIUS_RATIO;
+const DEFAULT_MASK_RADIUS_RATIO = CAPTURE_GUIDE_POST_CROP_MASK_RADIUS_RATIO;
 
 export function applyCircularFundusMask(
   image: Float32Array,

@@ -10,7 +10,10 @@
     "apk": "eas build -p android --profile preview",
     "apk:local": "eas build -p android --profile preview --local",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "validate:dataset": "node scripts/validate-dataset.js validation/manifest.json validation/predictions.json",
+    "models:setup": "python -m pip install --upgrade pip && pip install -r tools/model_conversion/requirements.txt",
+    "models:convert:segmentation": "python tools/model_conversion/convert_segformer_odoc_to_tflite.py --hf-model pamixsun/segformer_for_optic_disc_cup_segmentation --input-size 224 --output assets/models/glaucoma_odoc_segmentation.tflite --quantization float16"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

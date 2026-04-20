@@ -39,3 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# local validation datasets and outputs
+validation/images/
+validation/manifest.json
+validation/predictions.json

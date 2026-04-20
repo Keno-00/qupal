@@ -5,11 +5,13 @@ import { InferenceBootstrapStatus } from './types';
 type ModelUrlConfig = {
   drGradingUrl?: string;
   glaucomaUrl?: string;
+  glaucomaSegmentationUrl?: string;
 };
 
 export type RegisteredModel = {
   id: string;
-  task: 'dr-grading' | 'glaucoma-screening';
+  task: 'dr-grading' | 'glaucoma-screening' | 'glaucoma-segmentation';
+  required?: boolean;
   input: {
     width: number;
     height: number;
@@ -53,6 +55,19 @@ export const REGISTERED_MODELS: RegisteredModel[] = [
     localFileName: 'glaucoma_screening.tflite',
     remoteUrl: undefined,
   },
+  {
+    id: 'odoc-segmentation',
+    task: 'glaucoma-segmentation',
+    required: false,
+    input: {
+      width: 224,
+      height: 224,
+      channels: 3,
+      color: 'rgb',
+    },
+    localFileName: 'glaucoma_odoc_segmentation.tflite',
+    remoteUrl: undefined,
+  },
 ];
 
 const MODEL_DIR = `${FileSystem.documentDirectory ?? ''}models/`;
@@ -65,6 +80,8 @@ function getConfiguredModelUrls(): ModelUrlConfig {
   return {
     drGradingUrl: typeof raw.drGradingUrl === 'string' ? raw.drGradingUrl : undefined,
     glaucomaUrl: typeof raw.glaucomaUrl === 'string' ? raw.glaucomaUrl : undefined,
+    glaucomaSegmentationUrl:
+      typeof raw.glaucomaSegmentationUrl === 'string' ? raw.glaucomaSegmentationUrl : undefined,
   };
 }
 
@@ -76,6 +93,9 @@ function getEffectiveRemoteUrl(model: RegisteredModel): string | undefined {
   if (model.task === 'glaucoma-screening' && configured.glaucomaUrl) {
     return configured.glaucomaUrl;
   }
+  if (model.task === 'glaucoma-segmentation' && configured.glaucomaSegmentationUrl) {
+    return configured.glaucomaSegmentationUrl;
+  }
   return model.remoteUrl;
 }
 
@@ -83,10 +103,12 @@ export function getModelFileUri(fileName: string): string {
   return `${MODEL_DIR}${fileName}`;
 }
 
-export async function prepareInferenceRuntime(): Promise<void> {
+export async function prepareInferenceRuntime(options?: { forceRedownload?: boolean }): Promise<void> {
   if (!FileSystem.documentDirectory) {
     return;
   }
+
+  const forceRedownload = options?.forceRedownload === true;
 
   await FileSystem.makeDirectoryAsync(MODEL_DIR, { intermediates: true });
 
@@ -95,9 +117,19 @@ export async function prepareInferenceRuntime(): Promise<void> {
       const uri = getModelFileUri(model.localFileName);
       const info = await FileSystem.getInfoAsync(uri);
       const remoteUrl = getEffectiveRemoteUrl(model);
-      if (info.exists || !remoteUrl) {
+      if (!remoteUrl && info.exists) {
         return;
       }
+
+      if (forceRedownload && info.exists) {
+        await FileSystem.deleteAsync(uri, { idempotent: true });
+      }
+
+      const afterDeleteInfo = forceRedownload ? await FileSystem.getInfoAsync(uri) : info;
+      if (afterDeleteInfo.exists || !remoteUrl) {
+        return;
+      }
+
       await FileSystem.downloadAsync(remoteUrl, uri);
     }),
   );
@@ -119,11 +151,12 @@ export async function getInferenceBootstrapStatus(): Promise<InferenceBootstrapS
     };
   }
 
-  const requiredUris = REGISTERED_MODELS.map((model) => getModelFileUri(model.localFileName));
+  const requiredModels = REGISTERED_MODELS.filter((model) => model.required !== false);
+  const requiredUris = requiredModels.map((model) => getModelFileUri(model.localFileName));
   const checks = await Promise.all(requiredUris.map((uri) => FileSystem.getInfoAsync(uri)));
 
   const missing = checks
-    .map((info, index) => ({ info, model: REGISTERED_MODELS[index] }))
+    .map((info, index) => ({ info, model: requiredModels[index] }))
     .filter((entry) => !entry.info.exists)
     .map((entry) => entry.model);
 

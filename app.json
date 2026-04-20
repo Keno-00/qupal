@@ -45,7 +45,13 @@
     "extra": {
       "aiModels": {
         "drGradingUrl": "https://raw.githubusercontent.com/drprajapati/APTOSBlindnessDetection/master/app/src/main/assets/mobile_net_v2.tflite",
-        "glaucomaUrl": "https://raw.githubusercontent.com/nithin-cherukumalli/computer-vision-for-glaucoma/main/glaucoma_model.tflite"
+        "glaucomaUrl": "https://raw.githubusercontent.com/nithin-cherukumalli/computer-vision-for-glaucoma/main/glaucoma_model.tflite",
+        "glaucomaSegmentationUrl": "",
+        "glaucomaSegmentationConfig": {
+          "inputSize": 224,
+          "discClassIndex": 1,
+          "cupClassIndex": 2
+        }
       },
       "eas": {
         "projectId": "1f337651-8c5d-4af5-b050-dd1b1e0fbdcc"

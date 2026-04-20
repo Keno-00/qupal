@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "samples": [
+    {
+      "id": "dr-0001",
+      "drSeverity": 2,
+      "glaucomaProbability": null
+    },
+    {
+      "id": "gl-0001",
+      "drSeverity": null,
+      "glaucomaProbability": 0.92
+    }
+  ]
+}

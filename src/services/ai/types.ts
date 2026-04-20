@@ -2,12 +2,21 @@ export type AiRiskLevel = 'low' | 'medium' | 'high';
 
 export type DrSeverity = 0 | 1 | 2 | 3 | 4;
 
+export type GlaucomaLabel = 'Referable Glaucoma' | 'Non-Referable Glaucoma';
+
+export type GlaucomaSeverity = 'mild' | 'moderate' | 'severe';
+
 export type InferenceAvailability = 'ready' | 'unavailable';
 
 export type FundusModelOutput = {
   diabeticRetinopathy: number;
   hypertensionRetinopathy: null;
   glaucomaSigns: number;
+  glaucomaLabel: GlaucomaLabel;
+  glaucomaConfidence: number;
+  estimatedCdr: number;
+  glaucomaSeverity: GlaucomaSeverity;
+  glaucomaOverlayUri: string | null;
   drSeverity: DrSeverity;
   riskLevel: AiRiskLevel;
   markerSummary: string;
