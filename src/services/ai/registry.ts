@@ -10,7 +10,7 @@ type ModelUrlConfig = {
 
 export type RegisteredModel = {
   id: string;
-  task: 'dr-grading' | 'glaucoma-screening' | 'glaucoma-segmentation';
+  task: 'dr-grading' | 'glaucoma-screening' | 'glaucoma-segmentation' | 'reasoning-foundation';
   required?: boolean;
   input: {
     width: number;
@@ -20,6 +20,7 @@ export type RegisteredModel = {
   };
   localFileName: string;
   remoteUrl?: string;
+  asset?: any; // Reference to require() for local assets
   labelMap?: Record<number, string>;
 };
 
@@ -68,6 +69,20 @@ export const REGISTERED_MODELS: RegisteredModel[] = [
     localFileName: 'glaucoma_odoc_segmentation.tflite',
     remoteUrl: undefined,
   },
+  {
+    id: 'lfm-2.5-1.2b-instruct',
+    task: 'reasoning-foundation',
+    required: true,
+    input: {
+      width: 0, // LLM doesn't have fixed image input dimensions
+      height: 0,
+      channels: 3,
+      color: 'rgb',
+    },
+    localFileName: 'LFM2.5-1.2B-Instruct-Q4_K_M.gguf',
+    remoteUrl: undefined,
+    asset: require('../../../assets/models/LFM2.5-1.2B-Instruct-Q4_K_M.gguf'),
+  },
 ];
 
 const MODEL_DIR = `${FileSystem.documentDirectory ?? ''}models/`;
@@ -103,6 +118,29 @@ export function getModelFileUri(fileName: string): string {
   return `${MODEL_DIR}${fileName}`;
 }
 
+function hasNativeTfliteRuntime(): { ok: true } | { ok: false; reason: string } {
+  try {
+    const moduleRef = require('react-native-fast-tflite') as {
+      loadTensorflowModel?: unknown;
+    };
+    if (typeof moduleRef?.loadTensorflowModel !== 'function') {
+      return {
+        ok: false,
+        reason:
+          'Native TFLite runtime is not available in this binary. Rebuild and run a development client that includes react-native-fast-tflite.',
+      };
+    }
+    return { ok: true };
+  } catch (error) {
+    const detail = error instanceof Error && error.message ? ` (${error.message})` : '';
+    return {
+      ok: false,
+      reason:
+        `Native TFLite runtime failed to initialize${detail}. Rebuild the app (npx expo run:android) and relaunch the development client.`,
+    };
+  }
+}
+
 export async function prepareInferenceRuntime(options?: { forceRedownload?: boolean }): Promise<void> {
   if (!FileSystem.documentDirectory) {
     return;
@@ -126,11 +164,26 @@ export async function prepareInferenceRuntime(options?: { forceRedownload?: bool
       }
 
       const afterDeleteInfo = forceRedownload ? await FileSystem.getInfoAsync(uri) : info;
-      if (afterDeleteInfo.exists || !remoteUrl) {
+      if (afterDeleteInfo.exists) {
         return;
       }
 
-      await FileSystem.downloadAsync(remoteUrl, uri);
+      if (model.asset) {
+        // Copy from assets to document directory
+        try {
+          const { Asset } = require('expo-asset');
+          const asset = Asset.fromModule(model.asset);
+          await asset.downloadAsync();
+          await FileSystem.copyAsync({
+            from: asset.localUri || asset.uri,
+            to: uri,
+          });
+        } catch (e) {
+          console.error(`Failed to copy asset ${model.localFileName}:`, e);
+        }
+      } else if (remoteUrl) {
+        await FileSystem.downloadAsync(remoteUrl, uri);
+      }
     }),
   );
 }
@@ -148,6 +201,14 @@ export async function getInferenceBootstrapStatus(): Promise<InferenceBootstrapS
     return {
       availability: 'unavailable',
       reason: 'File system document directory is unavailable on this device.',
+    };
+  }
+
+  const nativeRuntime = hasNativeTfliteRuntime();
+  if (!nativeRuntime.ok) {
+    return {
+      availability: 'unavailable',
+      reason: nativeRuntime.reason,
     };
   }
 

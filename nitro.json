@@ -1,0 +1,10 @@
+{
+  "name": "LiquidModule",
+  "type": "hybrid-object",
+  "ios": {
+    "sourceDir": "src/services/ai/cpp"
+  },
+  "android": {
+    "sourceDir": "src/services/ai/cpp"
+  }
+}

@@ -4,8 +4,9 @@ Runtime model loading expects files in app storage at:
 
 - `FileSystem.documentDirectory/models/dr_aptos_mobilenet_v2.tflite`
 - `FileSystem.documentDirectory/models/glaucoma_screening.tflite`
+- `FileSystem.documentDirectory/models/LFM2.5-1.2B-Instruct-Q4_K_M.gguf`
 
-The app runs in strict model-only mode and will not process scans unless both files are present and loadable by the native runtime.
+The app runs in strict model-only mode and will not process scans or AI insights unless all files are present and loadable by the native runtime.
 
 The startup preparation step can auto-download missing files when URLs are configured in `app.json` under `expo.extra.aiModels`:
 

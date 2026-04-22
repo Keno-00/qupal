@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "GLANCE",
+    "name": "Glance Health",
     "slug": "glance",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,12 +14,12 @@
     },
     "ios": {
       "infoPlist": {
-        "NSCameraUsageDescription": "Camera is required to capture fundus images for functionality testing."
+        "NSCameraUsageDescription": "Glance needs camera access to take a photo of your eye for your checkup."
       },
       "supportsTablet": true
     },
     "android": {
-      "package": "com.glance.mvp",
+      "package": "com.glance.health",
       "permissions": [
         "CAMERA"
       ],
@@ -34,10 +34,12 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow GLANCE to use camera for fundus capture."
+          "cameraPermission": "Allow Glance to use your camera for your eye checkup."
         }
       ],
-      "react-native-fast-tflite"
+      "react-native-fast-tflite",
+      "@react-native-community/datetimepicker",
+      "expo-asset"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

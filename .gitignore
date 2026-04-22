@@ -44,3 +44,4 @@ yarn-error.*
 validation/images/
 validation/manifest.json
 validation/predictions.json
+assets/models/LFM2.5-1.2B-Instruct-Q4_K_M.gguf

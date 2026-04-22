@@ -1,3 +1,5 @@
+import 'react-native-gesture-handler';
+import 'react-native-nitro-modules';
 import './src/polyfills';
 import { registerRootComponent } from 'expo';
 
